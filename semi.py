@@ -16,8 +16,11 @@ class Node:
     if not self.is_start:
       self.parents_fwd = [p.fwd for p in self.parents]
       self.fwd = self.operation.apply(self)
-    else:
-      pass
+  
+  def calc_delta(self):
+    if not self.is_start:
+      self.delta = self.operation.df(self)
+
 
 class Model:
 
@@ -33,4 +36,17 @@ class Model:
   def fwd(self):
     for n in self.nodes:
       n.feed_forward()
+      n.calc_delta()
     return(self.nodes[-1].fwd)
+  
+  def backprop(self):
+    if (hasattr(self.nodes[-1].operation, "is_scalar")):
+      running_delta = self.nodes[-1].delta
+      for n in reversed(self.nodes[1:-1]):
+        if n.weight is not None:
+          n.grad = np.dot(n.operation.dw(n).T, running_delta)
+        running_delta = np.dot(running_delta, n.delta.T)
+    else:
+      raise ValueError('Final node is not a scalar')
+
+      
